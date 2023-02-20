@@ -1,9 +1,10 @@
 const { app, BrowserWindow, ipcMain, dialog, nativeTheme, shell } = require('electron');
 const path = require('path');
+const ProgressBar = require('electron-progressbar');
 
 let mainWindow;
 
-function createWindow () {
+function createWindow() {
   mainWindow = new BrowserWindow({
     width: 800,
     height: 600,
@@ -21,8 +22,6 @@ function createWindow () {
   const fs = require('fs');
 
   ipcMain.on('selected-files', (event, files) => {
-    let progress = 0;
-    mainWindow.setProgressBar(progress);
     dialog.showOpenDialog(mainWindow, {
       properties: ['openFile', "multiSelections"],
       filters: [
@@ -36,7 +35,33 @@ function createWindow () {
         if (!fs.existsSync(compressedFilesDir)) {
           fs.mkdirSync(compressedFilesDir);
         }
-        filePaths.forEach(filePath => {
+        const progressBar = new ProgressBar({
+          indeterminate: false,
+          title: 'Compression de fichier',
+          text: 'Compression ...',
+          detail: 'Veuillez patienter ...',
+          browserWindow: {
+            parent: mainWindow,
+            modal: true,
+            closable: false,
+            minimizable: false,
+            maximizable: false,
+            resizable: false
+          }
+        });
+
+        progressBar
+            .on('completed', () => {
+              progressBar.detail = 'Compression terminée !';
+            })
+            .on('aborted', () => {
+              console.error('Annulé');
+            });
+
+        let progress = 0;
+        progressBar.value = progress;
+
+        filePaths.forEach((filePath, index) => {
           const fileName = path.basename(filePath);
           const compressedFilePath = path.join(compressedFilesDir, fileName);
           const child = execFile(pngquant, ['-o', compressedFilePath, filePath]);
@@ -48,19 +73,18 @@ function createWindow () {
           });
           child.on('close', (code) => {
             console.log(`child process exited with code ${code}`);
+            progress += 1 / filePaths.length;
+            progressBar.value = progress;
+            if (index === filePaths.length - 1) {
+              progressBar.setCompleted();
+              shell.openPath(compressedFilesDir);
+            }
           });
-          progress += 0.5;
-          event.sender.send('compression-progress', progress);
         });
-        shell.openPath(compressedFilesDir);
       }
     }).catch(err => {
       console.log(err)
     });
-  });
-
-  mainWindow.webContents.on('progress', (progress) => {
-    mainWindow.setProgressBar(progress);
   });
 
   mainWindow.loadFile('index.html')
