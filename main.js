@@ -1,13 +1,12 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, nativeTheme, shell } = require('electron');
 const path = require('path');
-const { shell } = require('electron');
 
 let mainWindow;
 function createWindow () {
   mainWindow = new BrowserWindow({
     width: 800,
     height: 600,
-    fullscreen: false,
+    fullscreen: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: true,
@@ -21,7 +20,7 @@ function createWindow () {
   const fs = require('fs');
   ipcMain.on('selected-files', (event, files) => {
     dialog.showOpenDialog(mainWindow, {
-      properties: ['openFile'],
+      properties: ['openFile', "multiSelections"],
       filters: [
         { name: 'Images', extensions: ['png'] }
       ]
@@ -49,14 +48,13 @@ function createWindow () {
     });
   });
   mainWindow.loadFile('index.html')
+  nativeTheme.themeSource = "dark";
 }
 
 app.on('ready', createWindow);
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
+app.on("window-all-closed", function () {
+  if (process.platform !== "darwin") app.quit();
 });
 
 app.on('activate', () => {

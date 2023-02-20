@@ -1,18 +1,14 @@
 {
-  "name": "electron-quick-start",
+  "name": "miniProjetElectron1",
   "version": "1.0.0",
-  "description": "A minimal Electron application",
+  "description": "miniProjetElectron1",
   "main": "main.js",
   "scripts": {
     "start": "electron ."
   },
-  "repository": "https://github.com/electron/electron-quick-start",
+  "repository": "https://github.com/0ri0n09/miniProjetElectron1",
   "keywords": [
-    "Electron",
-    "quick",
-    "start",
-    "tutorial",
-    "demo"
+    "Electron"
   ],
   "author": "GitHub",
   "license": "CC0-1.0",
