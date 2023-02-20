@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, dialog, nativeTheme, shell } = require('electron');
 const path = require('path');
 const ProgressBar = require('electron-progressbar');
+const Button = require("./button");
 
 let mainWindow;
 
@@ -53,9 +54,19 @@ function createWindow() {
         progressBar
             .on('completed', () => {
               progressBar.detail = 'Compression terminée !';
+              dialog.showMessageBox({
+                type: 'warning',
+                title: 'Info Compression',
+                message: 'Compression terminée !'
+              })
             })
             .on('aborted', () => {
               console.error('Annulé');
+              dialog.showMessageBox({
+                type: 'warning',
+                title: 'Info Compression',
+                message: 'Erreur lors de la compression :/'
+              })
             });
 
         let progress = 0;
@@ -64,22 +75,24 @@ function createWindow() {
         filePaths.forEach((filePath, index) => {
           const fileName = path.basename(filePath);
           const compressedFilePath = path.join(compressedFilesDir, fileName);
-          const child = execFile(pngquant, ['-o', compressedFilePath, filePath]);
-          child.stdout.on('data', (data) => {
-            console.log(`stdout: ${data}`);
-          });
-          child.stderr.on('data', (data) => {
-            console.error(`stderr: ${data}`);
-          });
-          child.on('close', (code) => {
-            console.log(`child process exited with code ${code}`);
-            progress += 1 / filePaths.length;
-            progressBar.value = progress;
-            if (index === filePaths.length - 1) {
-              progressBar.setCompleted();
-              shell.openPath(compressedFilesDir);
-            }
-          });
+          setTimeout(() => {
+            const child = execFile(pngquant, ['-o', compressedFilePath, filePath]);
+            child.stdout.on('data', (data) => {
+              console.log(`stdout: ${data}`);
+            });
+            child.stderr.on('data', (data) => {
+              console.error(`stderr: ${data}`);
+            });
+            child.on('close', (code) => {
+              console.log(`child process exited with code ${code}`);
+              progress += 1 / filePaths.length;
+              progressBar.value = progress;
+              if (index === filePaths.length - 1) {
+                progressBar.setCompleted();
+                shell.openPath(compressedFilesDir);
+              }
+            });
+          }, (index + 1) * 1000);
         });
       }
     }).catch(err => {
