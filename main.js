@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain, dialog, nativeTheme, shell } = require('ele
 const path = require('path');
 
 let mainWindow;
+
 function createWindow () {
   mainWindow = new BrowserWindow({
     width: 800,
@@ -12,13 +13,16 @@ function createWindow () {
       nodeIntegration: true,
       contextIsolation: true
     }
-  })
+  });
 
   const pngquant = require('pngquant-bin');
   const execFile = require('child_process').execFile;
   const os = require('os');
   const fs = require('fs');
+
   ipcMain.on('selected-files', (event, files) => {
+    let progress = 0;
+    mainWindow.setProgressBar(progress);
     dialog.showOpenDialog(mainWindow, {
       properties: ['openFile', "multiSelections"],
       filters: [
@@ -35,11 +39,18 @@ function createWindow () {
         filePaths.forEach(filePath => {
           const fileName = path.basename(filePath);
           const compressedFilePath = path.join(compressedFilesDir, fileName);
-          execFile(pngquant, ['-o', compressedFilePath, filePath], (error, stdout, stderr) => {
-            if (error) {
-              console.error(error);
-            }
+          const child = execFile(pngquant, ['-o', compressedFilePath, filePath]);
+          child.stdout.on('data', (data) => {
+            console.log(`stdout: ${data}`);
           });
+          child.stderr.on('data', (data) => {
+            console.error(`stderr: ${data}`);
+          });
+          child.on('close', (code) => {
+            console.log(`child process exited with code ${code}`);
+          });
+          progress += 0.5;
+          event.sender.send('compression-progress', progress);
         });
         shell.openPath(compressedFilesDir);
       }
@@ -47,6 +58,11 @@ function createWindow () {
       console.log(err)
     });
   });
+
+  mainWindow.webContents.on('progress', (progress) => {
+    mainWindow.setProgressBar(progress);
+  });
+
   mainWindow.loadFile('index.html')
   nativeTheme.themeSource = "dark";
 }
